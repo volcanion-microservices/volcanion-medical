@@ -1,0 +1,58 @@
+services:
+  redis:
+    build:
+      context: database/redis
+      dockerfile: Dockerfile
+      args:
+        REDIS_VERSION: ${REDIS_VERSION}
+    container_name: volcanion-identity-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - volcanion-identity-network
+    volumes:
+      - redis-data:/data
+    restart: always
+
+  volcanion-identity-mysql:
+    build:
+      context: mysql/
+      dockerfile: Dockerfile
+      args:
+        MYSQL_DATABASE: $MYSQL_DATABASE
+        MYSQL_USER: $MYSQL_USER
+        MYSQL_PASSWORD: $MYSQL_PASSWORD
+        MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+    container_name: volcanion-identity-mysql
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci --default-time-zone=Asia/Ho_Chi_Minh --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306:3306
+  
+  volcanion-identity:
+    build:
+      context: .
+      dockerfile: src/Volcanion.Medical.Presentation/Dockerfile
+      args:
+        - NUGET_SOURCE=$NUGET_SOURCE
+    container_name: volcanion-identity
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5043:443"
+      - "5080:80"
+    networks:
+      - volcanion-identity-network
+    depends_on:
+      - redis
+      - postgres
+    restart: always
+
+networks:
+  volcanion-identity-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+    
